@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     # --- YouTube Data API v3 ---
     youtube_enabled: bool = True
     youtube_api_key: SecretStr | None = None
+    # Sólo para pruebas locales contra un servidor falso; en uso normal no se cambia.
+    youtube_api_base: str = "https://www.googleapis.com/youtube/v3"
 
     # --- Transcripción (Whisper local) ---
     whisper_enabled: bool = True

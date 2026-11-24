@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings, get_settings
+from app.core.errors import ProviderDisabled, UsageLimitExceeded
 from app.db.session import get_db
 from app.models import ReferenceStatus, Tag
 from app.schemas.references import (
@@ -13,6 +15,7 @@ from app.schemas.references import (
     TagOut,
 )
 from app.services import references as svc
+from app.services import youtube as yt
 
 router = APIRouter(tags=["references"])
 
@@ -44,13 +47,27 @@ def list_references(
 
 
 @router.post("/references", response_model=ReferenceOut, status_code=201)
-def create_reference(body: ReferenceCreateFromUrl, db: Session = Depends(get_db)):
+def create_reference(body: ReferenceCreateFromUrl, db: Session = Depends(get_db),
+                     settings: Settings = Depends(get_settings)):
     try:
         ref = svc.create_from_url(db, body.url, body.title, body.category, body.tags, body.notes)
     except svc.DuplicateReference as e:
         raise HTTPException(409, detail={"message": str(e), "id": e.existing.id}) from e
     except ValueError as e:
         raise HTTPException(422, detail=str(e)) from e
+    # Enriquecimiento best-effort: si YouTube no está disponible, la referencia queda igual
+    # guardada y puede actualizarse luego con POST /references/{id}/refresh.
+    if ref.youtube_id and settings.youtube_enabled and settings.youtube_configured:
+        try:
+            videos = yt.fetch_videos(db, settings, [ref.youtube_id])
+            if videos:
+                yt.apply_metadata(ref, videos[0])
+                if body.title:
+                    ref.title = body.title
+                yt.record_snapshots(db, videos)
+                db.commit()
+        except (yt.YouTubeError, UsageLimitExceeded, ProviderDisabled):
+            db.rollback()
     return _out(db, ref)
 
 

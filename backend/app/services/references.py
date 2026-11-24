@@ -1,9 +1,11 @@
+from collections import defaultdict
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.errors import NotFound
 from app.models import MetricSnapshot, Reference, Tag
-from app.services.metrics import compute_growth
+from app.services.metrics import Growth, compute_growth
 from app.services.youtube_urls import canonical_url, extract_youtube_id
 
 
@@ -108,16 +110,28 @@ def list_references(
     return list(db.scalars(stmt)), total
 
 
-def growth_for(db: Session, ref: Reference):
-    pts = db.execute(
-        select(MetricSnapshot.captured_at, MetricSnapshot.view_count)
-        .where(MetricSnapshot.reference_id == ref.id)
-    ).all()
-    return compute_growth([(t, v) for t, v in pts])
+def growth_by_youtube_id(db: Session, youtube_ids: list[str]) -> dict[str, Growth]:
+    points: dict[str, list] = defaultdict(list)
+    if youtube_ids:
+        rows = db.execute(
+            select(MetricSnapshot.youtube_id, MetricSnapshot.captured_at, MetricSnapshot.view_count)
+            .where(MetricSnapshot.youtube_id.in_(youtube_ids))
+        ).all()
+        for yid, t, v in rows:
+            points[yid].append((t, v))
+    return {yid: compute_growth(points.get(yid, [])) for yid in youtube_ids}
 
 
-def add_snapshot(db: Session, ref: Reference) -> MetricSnapshot:
-    snap = MetricSnapshot(reference_id=ref.id, view_count=ref.view_count,
-                          like_count=ref.like_count, comment_count=ref.comment_count)
-    db.add(snap)
-    return snap
+def growth_for(db: Session, ref: Reference) -> Growth:
+    if not ref.youtube_id:
+        return compute_growth([])
+    return growth_by_youtube_id(db, [ref.youtube_id])[ref.youtube_id]
+
+
+def snapshots_for(db: Session, ref: Reference) -> list[MetricSnapshot]:
+    if not ref.youtube_id:
+        return []
+    return list(db.scalars(
+        select(MetricSnapshot).where(MetricSnapshot.youtube_id == ref.youtube_id)
+        .order_by(MetricSnapshot.captured_at)
+    ))

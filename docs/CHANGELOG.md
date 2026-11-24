@@ -1,5 +1,42 @@
 # Registro de fases
 
+## Fase 3 — Integración con YouTube ✅ (verificación con clave real pendiente)
+
+**Terminado**
+- Cliente YouTube Data API v3 (`services/youtube.py`): `search.list`, `videos.list`
+  (detalles y `chart=mostPopular`), `videoCategories.list`. Clave en header
+  `X-Goog-Api-Key`, nunca en la URL. Errores traducidos (cuota agotada → 429, clave
+  inválida/API no habilitada → 503).
+- Radar (`POST /api/radar/search`): palabras clave, categoría, idioma, país, antigüedad
+  máxima, duración (filtro grueso de YouTube + mínimo/máximo exacto en segundos), orden
+  (vistas, fecha, relevancia, valoración), paginación. Modo "Tendencias por categoría"
+  (1 unidad de cuota en vez de 101).
+- Mediciones históricas: cada consulta registra un `MetricSnapshot` por video (esté o no en
+  la biblioteca). Migración 2 desacopla snapshots de referencias (por `youtube_id`), con copia
+  de datos y downgrade probados; convención de nombres de constraints.
+- Crecimiento medido (vistas/h) sólo con ≥2 mediciones; las "vistas/día" se rotulan como
+  promedio desde la publicación, no como crecimiento.
+- Guardar desde el radar (`POST /api/radar/save`), alta manual por URL con enriquecimiento
+  automático (si YouTube falla la referencia igual se guarda), actualización individual
+  (`/references/{id}/refresh`), historial (`/references/{id}/snapshots`) y job
+  `refresh_metrics` para medir toda la biblioteca.
+- Cuota: control previo y registro por unidades (search 100, videos/categorías 1).
+- UI del Radar viral con todos los filtros, tarjetas con métricas, insignia de crecimiento
+  honesta, guardado y alta por URL.
+
+**Verificación**
+- `pytest`: 40 tests (servidor YouTube falso con el formato real de la API): filtros y
+  parámetros enviados, clave sólo en header, orden, filtro de duración, crecimiento con dos
+  mediciones (300 vistas/h), modo tendencias, guardado sin duplicar, refresh, historial,
+  enriquecimiento, errores de cuota, límite local de cuota, job de actualización.
+- E2E en Chromium contra servidor falso local: búsqueda → 4 resultados ordenados por vistas
+  → guardar → "En la biblioteca" → alta por URL con título real → cuota registrada 104 u.
+
+**Pendiente**
+- Prueba con la API real: requiere `YOUTUBE_API_KEY`. Checklist: buscar "misterios" en
+  español/AR último mes; verificar resultados reales; guardar uno; repetir la búsqueda más
+  tarde y confirmar que aparece crecimiento medido.
+
 ## Fase 2 — Base de datos y backend ✅
 
 **Terminado y verificado**

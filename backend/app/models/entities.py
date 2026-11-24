@@ -70,11 +70,6 @@ class Reference(TimestampMixin, Base):
     )
 
     tags: Mapped[list[Tag]] = relationship(secondary=reference_tags, lazy="selectin")
-    snapshots: Mapped[list["MetricSnapshot"]] = relationship(
-        back_populates="reference",
-        cascade="all, delete-orphan",
-        order_by="MetricSnapshot.captured_at",
-    )
     assets: Mapped[list["MediaAsset"]] = relationship(back_populates="reference")
     transcripts: Mapped[list["Transcript"]] = relationship(
         back_populates="reference", cascade="all, delete-orphan"
@@ -88,18 +83,22 @@ class Reference(TimestampMixin, Base):
 
 
 class MetricSnapshot(Base):
-    """Medición histórica de métricas públicas. Base para calcular crecimiento."""
+    """Medición histórica de métricas públicas de un video de YouTube.
+
+    Se registra cada vez que el video se consulta (radar, alta, actualización), esté o no en
+    la biblioteca. Es la base para calcular crecimiento (nunca con una sola medición).
+    """
 
     __tablename__ = "metric_snapshots"
     id: Mapped[int] = mapped_column(primary_key=True)
-    reference_id: Mapped[int] = mapped_column(
-        ForeignKey("references.id", ondelete="CASCADE"), index=True
+    youtube_id: Mapped[str] = mapped_column(String(32), index=True)
+    reference_id: Mapped[int | None] = mapped_column(
+        ForeignKey("references.id", ondelete="SET NULL"), index=True
     )
     view_count: Mapped[int | None] = mapped_column(Integer)
     like_count: Mapped[int | None] = mapped_column(Integer)
     comment_count: Mapped[int | None] = mapped_column(Integer)
-    captured_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
-    reference: Mapped[Reference] = relationship(back_populates="snapshots")
+    captured_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, index=True)
 
 
 class MediaAsset(TimestampMixin, Base):

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV } from "@/lib/nav";
 
-export const CURRENT_PHASE = 2;
+export const CURRENT_PHASE = 3;
 
 export function Sidebar() {
   const pathname = usePathname();
