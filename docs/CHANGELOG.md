@@ -1,5 +1,34 @@
 # Registro de fases
 
+## Fase 2 — Base de datos y backend ✅
+
+**Terminado y verificado**
+- Modelos SQLAlchemy 2.0: `Reference`, `MetricSnapshot`, `Tag`, `MediaAsset`, `Transcript`,
+  `Analysis`, `Script`, `Clip`, `Job`, `UsageEvent`. Estados editoriales como enums (cubren
+  los 9 de la especificación). Fechas siempre UTC (`UTCDateTime`, SQLite pierde el tzinfo).
+- Alembic con migración inicial; se aplica automáticamente al arrancar (`render_as_batch`
+  para SQLite, portable a PostgreSQL).
+- API de referencias: alta por URL (normaliza cualquier formato de URL de YouTube, acepta
+  URLs no-YouTube como referencia manual, detecta duplicados con 409), listado con búsqueda
+  de texto, filtros por estado/categoría/etiqueta/favorito, orden y paginación, edición,
+  borrado, etiquetas normalizadas.
+- Crecimiento: `compute_growth` sólo reporta con ≥2 snapshots (`sufficient_data`).
+- Control de uso y costos: `ensure_allowed` / `record` por proveedor; límites diarios de
+  Claude, cuota de YouTube por unidades, renders y presupuesto mensual. Errores → HTTP 429
+  (límite) / 503 (proveedor desactivado o sin clave).
+- Cola de jobs persistida con hilo worker, reclamo atómico, progreso, errores guardados y
+  recuperación de jobs interrumpidos.
+- Job real `render_selftest`: MP4 1080x1920 H.264/AAC validado con ffprobe.
+- Frontend: Dashboard con los 6 contadores reales y medidores de uso/costos; botón de
+  autodiagnóstico de render en Configuración.
+
+**Verificación**
+- `pytest`: 22 tests OK (URLs, CRUD, filtros, duplicados, dashboard, crecimiento, costos,
+  límites, proveedores desactivados, jobs OK/fallidos, render real).
+- `ruff`, `eslint`, `tsc`, `next build`: OK.
+- E2E manual: base nueva → migración al arranque → alta de referencia vía proxy Next →
+  Dashboard muestra 1 referencia → autodiagnóstico desde el navegador "h264 1080x1920 · aac".
+
 ## Fase 1 — Arquitectura y configuración ✅
 
 **Terminado y verificado**

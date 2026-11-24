@@ -1,3 +1,4 @@
+import { SelfTestButton } from "@/components/SelfTestButton";
 import { StatusPanel } from "@/components/StatusPanel";
 import { fetchSystemStatus } from "@/lib/api";
 
@@ -26,6 +27,12 @@ export default async function SettingsPage() {
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Proveedores</h2>
         <StatusPanel status={status} />
+      </section>
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
+          Diagnóstico
+        </h2>
+        <SelfTestButton />
       </section>
       {status && (
         <section>

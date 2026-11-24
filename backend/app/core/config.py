@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     # --- Persistencia ---
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'data' / 'vcf.db').as_posix()}"
     storage_dir: Path = BACKEND_DIR / "storage"
+    jobs_worker_enabled: bool = True
 
     # --- Anthropic Claude ---
     anthropic_enabled: bool = True
